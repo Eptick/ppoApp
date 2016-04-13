@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Zadatak</title>
+    <script> var d3 = require("d3"); </script>
+  </head>
+  <body>
+    <h3> Metoda </h3>
+    <input type="radio" name="metoda" value="1" checked></input><label>Pomična aritmetička sredina</label><br/>
+    <input type="radio" name="metoda" value="2"></input><label>Ponderirana aritmetička sredina</label><br/>
+    <input type="radio" name="metoda" value="3"></input><label>Eksponencijalno izglađivanje</label><br/>
+    <input type="radio" name="metoda" value="4"></input><label>Linearni Trend</label><br/><br/>
+    
+    <div class="odabir"><label for="brojPerioda">Broj perioda: </label><input id="brojPerioda" type="number" name="brojPerioda" value="10" min="1" onkeydown="return false"></div>
+    <div class="odabir"><label for="brojPPerioda" class="m1 m2">Broj prethodnih perioda: </label><input id="n" type="number" name="brojPPerioda" value="3" min="1" class="m1 m2" onkeydown="return false"></div>
+    <div id="tFaktori" class="m2 odabir">  </div>
+      <div class="m3" style="display: none;">
+        <label for="alfa" >Unesite koeficijent izglađivanja: </label>
+        <input id="alfa" type="number" name="alfa" value="0.2" max="1" min="0" step="0.1" class="m3"><br/>
+      </div>
+      <button id="submit" type="button">Izračunaj</button>
+     <table class="tablica">
+        <thead>
+          <tr class="header">
+            <th> Period </th>
+            <th> Stvarna Potražnja </th>
+            <th class="m4">XX</th>
+            <th class="m4">XY</th>
+            <th class=""> Predviđena potražnja </th>
+          </tr>
+        </thead>
+    <tbody id="tablica">
+    <tr class="red">
+        <td>1</td>
+        <td><input class="sv" type="number" value="120"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        <tr class="red">
+        <td>2</td>
+        <td><input class="sv" type="number" value="90"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        <tr class="red">
+        <td>3</td>
+        <td><input class="sv"  type="number" value="100"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        <tr class="red">
+        <td>4</td>
+        <td><input class="sv"  type="number" value="75"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        </tr>
+        <tr class="red">
+        <td>5</td>
+        <td><input class="sv"  type="number" value="110"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        </tr>
+        <tr class="red">
+        <td>6</td>
+        <td><input class="sv"  type="number" value="50"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        </tr>
+        <tr class="red">
+        <td>7</td>
+        <td><input class="sv"  type="number" value="75"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        </tr>
+        <tr class="red">
+        <td>8</td>
+        <td><input class="sv"  type="number" value="130"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        </tr>
+        <tr class="red">
+        <td>9</td>
+        <td><input class="sv"  type="number" value="110"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+        </tr>
+        <tr class="red">
+        <td>10</td>
+        <td><input class="sv"  type="number" value="90"/></td>
+        <td class="xx m4"></td>
+        <td class="xy m4"></td>
+        <td class="pp"></td>
+        </tr>
+    </tbody>
+    <tfoot>
+        <tr id="rezultati">
+            <td id="np1Period">
+                11
+            </td>
+            <td></td>
+            <td id="sxx" class="m4"></td>
+            <td id="sxy" class="m4"></td>
+            <td class="pp"></td>
+        </tr>
+    </tfoot>
+    </table>
+    <div class="mad">MAD: <span id="mad"></span></div><br/>
+    <div class="mapd">MAPD: <span id="mapd"></span></div><br/>
+    <div class="kumulativna">Kumulativna greska: <span id="kumulativna"></span></div><br/>
+    <div class="bias">BIAS: <span id="bias"></span></div><br/>
+    <div class="ts">TS: <span id="ts"></span></div><br/>
+    <div class="mse">MSE: <span id="mse"></span></div><br/>
+
+  <div id="chart" class="chart"></div>
+  </body>
+  <script>window.$ = window.jQuery = require('./js/jquery.min.js');</script>
+  <script>
+  $(".m4").hide();
+  trenutnaMetoda = "1";
+  brojPerioda = parseInt( $("#brojPerioda").val() );
+  $("#brojPerioda").change(function(){
+    var table = document.getElementById("tablica");
+    if(brojPerioda < parseInt(this.value)){
+      // Dodaj element
+      var red = document.createElement("TR");
+      red.className = "red";
+      var td1 = document.createElement("TD");
+      td1.innerHTML = this.value;
+      var td = document.createElement("TD");
+      var sVInput = document.createElement("INPUT");
+      sVInput.type = "number";
+      sVInput.value = "0";
+      sVInput.className = "sv";
+      var tdpp = document.createElement("TD");
+      tdpp.className = "pp";
+
+      var xxE = document.createElement("TD");
+      xxE.className = "xx m4";
+
+      var xyE = document.createElement("TD");
+      xyE.className = "xy m4";
+
+       if( trenutnaMetoda !== "4"){
+           $(xxE).hide();
+           $(xyE).hide();
+      } 
+      td.appendChild(sVInput);
+      red.appendChild(td1);
+      red.appendChild(td);
+      red.appendChild(xxE);
+      red.appendChild(xyE);
+      red.appendChild(tdpp);
+      table.appendChild(red);
+    } else if( brojPerioda > this.value){ $("#tablica").children().last().remove(); }
+    $("#np1Period").html( parseInt(this.value)+1 );
+    brojPerioda = parseInt(this.value);
+  });
+  $("input[name='metoda']").change(function(){
+    trenutnaMetoda = this.value;
+    $(".m1").hide();  $(".m2").hide();  $(".m3").hide();  $(".m4").hide();
+    switch(this.value){
+      case "1": $(".m1").show();  break;
+      case "2": $(".m2").show(); promjenaPrethodnih(); break;
+      case "3": $(".m3").show();  break;
+      case "4": $(".m4").show();  break;
+    }
+  });
+  function metoda1(n, brojPerioda, sp, pp){
+    for (var i = n; i < brojPerioda + 1; i++) {
+      var suma = 0.0;
+      for (var j = 1; j <= n; j++) {  suma += sp[i - j];  }
+      pp[i].innerHTML = Math.round( suma / n );
+    } // end for
+  } // end metoda 1
+  function metoda2(n, brojPerioda, sp, pp){
+      var koef = [];
+      $(".tFaktor").each(function(){  koef.push(parseFloat(this.value) ); });
+      for (var i = n; i < brojPerioda + 1; i++) {
+        var suma = 0.0;
+        for (var j = 1; j <= n; j++) {
+        suma += sp[i - j] *   koef[j-1] ;
+        }
+      pp[i].innerHTML = Math.round(suma);
+      } // end for 
+  } // end metoda2
+  function metoda3(n, brojPerioda, sp, pp){
+    var koef = parseFloat( $("#alfa").val() );
+     pp[0].innerHTML = sp[0];
+      for (var i = 1; i < brojPerioda + 1; i++){
+            pp[i].innerHTML = Math.round( parseFloat( (koef*sp[i-1]) + ((1 - koef) * parseFloat(pp[i-1].innerHTML) ) ) );
+      } // end for
+  } // end metoda3
+  function metoda4(n, brojPerioda, sp, pp){
+    var xx = []; var xy = []; var koef = parseFloat( $("#alfa").val() );
+    sxx = 0;  sxy = 0;
+    $(".xx").each(function(){
+      xx.push(this);
+      this.innerHTML = Math.pow(parseInt($(this.parentElement).children().first().html()),2);
+      sxx += parseInt(this.innerHTML); 
+    });      
+    $("#sxx").html(sxx);
+    $(".xy").each(function(){
+      xy.push(this);
+      this.innerHTML = parseInt($(this.parentElement).children().first().html()) * parseFloat($(this.parentElement).find("td > input.sv").val()) ;
+      sxy += parseInt(this.innerHTML); 
+    });      
+    $("#sxy").html(sxy);
+    var _x = 0; var _y = 0;
+    for(var i = 1; i <= brojPerioda; i++){
+      _x += i;
+      _y += sp[i-1];
+    }
+    _x = _x/brojPerioda;
+    _y = _y/brojPerioda;
+
+    b = (sxy - brojPerioda * _x * _y) / ( sxx - brojPerioda*( _x * _x ));
+    a = _y - b * _x;
+
+    for( var i = 0; i < brojPerioda + 1; i ++){ pp[i].innerHTML = Math.round( a + b * (i+1) );  }
+  } 
+  $("#submit").click(function(){
+    var n = parseInt( $("#n").val() );
+    var brojPerioda = parseInt( $("#brojPerioda").val() );
+    var sp = [];  var pp = [];
+    $(".sv").each(function(){ sp.push( parseInt(this.value) );  });
+    $(".pp").each(function(){ pp.push(this);  });
+
+    switch(trenutnaMetoda){
+      case "1": metoda1(n, brojPerioda, sp, pp); break;
+      case "2": metoda2(n, brojPerioda, sp, pp); break;
+      case "3": metoda3(n, brojPerioda, sp, pp); break;
+      case "4": metoda4(n, brojPerioda, sp, pp); break;
+    }
+    izracunajMad(brojPerioda, sp, pp);
+    izracunajMapd(brojPerioda, sp, pp);
+    izracunajKumulativnaGreskaiBIAS(brojPerioda, sp, pp);
+
+    nacrtajGraf();
+  });
+  function izracunajMad(brojPerioda, sp, pp){
+      var suma = 0;
+      for(var i = 0; i < brojPerioda; i++){ 
+        var x = parseFloat(pp[i].innerHTML);
+        if ( isNaN(x) ){  continue;  }
+        suma += Math.abs(sp[i] - x);  
+      }
+      $("#mad").html( parseFloat(suma/brojPerioda)  );
+  }
+   function izracunajMapd(brojPerioda, sp, pp){
+      var sumaVrijednosti = 0;
+      var suma = 0;
+      for(var i = 0; i < brojPerioda; i++){ 
+        var x = parseFloat(pp[i].innerHTML);
+        if ( isNaN(x) ){   continue;  }
+        suma += sp[i] - x;  
+        sumaVrijednosti += sp[i];
+      }
+      $("#mapd").html(  suma/sumaVrijednosti );
+  }
+  function izracunajKumulativnaGreskaiBIAS(brojPerioda, sp, pp){
+    var suma = 0;
+      for(var i = 0; i < brojPerioda; i++){ 
+        var x = parseFloat(pp[i].innerHTML);
+        if ( isNaN(x) ){  continue;  }
+        suma += sp[i] - x;  
+      }
+      $("#kumulativna").html( parseFloat(suma)  );
+      $("#bias").html( parseFloat(suma/brojPerioda)  );
+      $("#ts").html( parseFloat(suma / parseFloat(  $("#mad").html()  ) ) );
+      $("#mse").html( parseFloat(Math.pow(suma,2) / (brojPerioda - 1) )  );
+  }
+  function promjenaPrethodnih(){
+    if(this.value >= parseInt($("#brojPerioda").val() ) ){
+      this.value = parseInt($("#brojPerioda").val() ) - 1;
+    }
+    if(trenutnaMetoda === "2"){
+      $("#tFaktori").children().each(function(){$(this).remove();});
+        var n = parseInt( $("#n").val() );
+        for(var i = 0; i < n; i++){
+          var input = document.createElement("INPUT");
+          input.type = "number";  input.className = "tFaktor";  input.value = "0";
+          $("#tFaktori").append("<label>Težinski faktor za " + parseInt(i + 1) +" prethodni period: </label>").append(input).append("<br/>");
+        } // end for
+    } // end if 
+  } // end promjenaPrethodnih
+  $("#n").change( promjenaPrethodnih );
+  function nacrtajGraf(){  
+    var w = 900, h = 400;
+    
+    if (document.getElementsByTagName("svg").length !== 0){
+      $("svg").remove();
+    }
+    var datasp = [];
+    var datap = [];
+    pomakZaX = (w / (brojPerioda+1) );
+    svx = 0;
+   $(".sv").each(function(){
+        var x = {x: 10, y: 0};
+        x.y = (-parseInt(this.value)) + h;
+        x.x += svx;
+        svx += pomakZaX;
+        datasp.push( x );  
+    });
+    svx = 0;
+   $(".pp").each(function(){ 
+    if(this.innerHTML === ""){
+        svx += pomakZaX;
+    } else {
+      var x = {x: 10, y: 0};
+        x.y = (-parseInt(this.innerHTML ) ) + h;
+        x.x += svx;
+        svx += pomakZaX;
+        datap.push( x );   
+    }
+  });
+  
+  
+   // Linije za stvarnu potražju
+   var data2 = datap;
+   var data = datasp;
+   var links = function(){
+       var b = [];
+       for(var i = 0; i < data.length - 1; i = i + 1){
+           var x = {source: data[0], target: data[1]};
+           x.source = data[i];
+           x.target = data[i+1];
+           b.push(x);
+       }
+       return b;
+   }
+   links = links();
+   // Linije za predviđanje
+   var links2 = function(){
+       var b = [];
+       for(var i = 0; i < data2.length - 1; i = i + 1){
+           var x = {source: data2[0], target: data2[1]};
+           x.source = data2[i];
+           x.target = data2[i+1];
+           b.push(x);
+       }
+       return b;
+   }
+   links2 = links2();
+   
+   
+   
+   var vis = d3.select("#chart").append("svg");
+   vis.attr("width", w).attr("height", h);
+   
+   // Crtaj stvarnu potražnju
+   vis.selectAll("circle .nodes")
+      .data(data)
+      .enter()
+      .append("svg:circle")
+      .attr("class", "nodes")
+      .attr("cx", function(d){ return d.x })
+      .attr("cy", function(d){ return d.y })
+      .attr("r", "2px")
+      .attr("fill", "#BB2266");
+   vis.selectAll(".line")
+      .data(links)
+      .enter()
+      .append("line")
+      .attr("x1", function(d) { return d.source.x })
+      .attr("y1", function(d) { return d.source.y })
+      .attr("x2", function(d) { return d.target.x })
+      .attr("y2", function(d) { return d.target.y })
+      .style("stroke", "rgb(6,120,155)");
+   
+   // Crtaj liniju predviđanja
+   vis.selectAll("circle .nodes")
+      .data(data2)
+      .enter()
+      .append("svg:circle")
+      .attr("class", "nodes")
+      .attr("cx", function(d){ return d.x })
+      .attr("cy", function(d){ return d.y })
+      .attr("r", "2px")
+      .attr("fill", "#BB2266");
+   vis.selectAll(".line")
+      .data(links2)
+      .enter()
+      .append("line")
+      .attr("x1", function(d) { return d.source.x })
+      .attr("y1", function(d) { return d.source.y })
+      .attr("x2", function(d) { return d.target.x })
+      .attr("y2", function(d) { return d.target.y })
+      .style("stroke", "rgb(6,120,155)");   
+  
+
+  }
+  </script>
+  <style>
+    
+    cicle{
+       color: black;
+    }
+    body{
+        background-color: #303030;
+        color: white;
+        font-family: Segoe WPC,Segoe UI,SFUIText-Light,HelveticaNeue-Light,sans-serif;
+        font-size: 14px;
+        line-height: 18px;
+    }
+    input{
+        background-color: inherit;
+        border: solid 1px white;
+        color: white;
+        box-shadow: none;
+        padding: 5px;
+    }
+    td > input{
+        border: none;
+    }
+    table, td, th{  border: 1px solid #BBC6D7;  }
+    table{      width: 100%;    }
+    td > input{  width: 98%;    }
+    td {    padding: 3px;   }
+    th{ font-weight: normal; }
+    .odabir{    padding-top: 5px;padding-bottom: 5px;   }
+    #submit{
+        border: 1px solid white;
+        background-color: inherit;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        margin: 5px;
+        position: relative;
+        width: 200px;
+    }
+  </style>
+  <style type="text/css">
+    path {
+        stroke: steelblue;
+        stroke-width: 2;
+        fill: none;
+    }
+
+    line {
+        stroke: black;
+    }
+
+    text {
+        font-family: Arial;
+        font-size: 9pt;
+    }
+  </style>
+
+</html>
